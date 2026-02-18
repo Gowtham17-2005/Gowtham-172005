@@ -1,44 +1,53 @@
 import streamlit as st
 from TTS.api import TTS
 import os
-from pydub import AudioSegment
+import torch
 
-# Model-ai load pannuvathu (Muthal thadava matum late aagum)
+# Page Config
+st.set_page_config(page_title="Ghost Story AI Voice", page_icon="👻")
+
+st.title("👻 Ghost Story - Voice Cloner")
+st.write("Unga voice-laye bayangaramaana kathaigalai uruvaakkunga!")
+
+# AI Model Load (Unga 16GB RAM ithai nalla handle pannum)
 @st.cache_resource
 def load_model():
-    # GPU iruntha gpu=True kudunga, illana False
-    return TTS("tts_models/multilingual/multi-dataset/xtts_v2", gpu=False)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    return TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
 
 tts = load_model()
 
-st.title("🎙️ Personal Tamil Voice Cloner")
-st.write("Unga 8-second voice-ai upload panni, unga voice-laye pesa vainga!")
+# 1. Voice Upload Section
+uploaded_file = st.file_uploader("Unga 8-second audio file-ah upload pannunga (WAV/MP3)", type=['wav', 'mp3'])
 
-# 1. Voice File Upload
-uploaded_file = st.file_uploader("Upload your 8-sec voice (MP3/WAV)", type=["mp3", "wav"])
+# 2. Story Text Section
+story_text = st.text_area("Ghost Story Script-ah inga type pannunga:", 
+                          height=200, 
+                          placeholder="Antha iruttu araiyil...")
 
-# 2. Text Input
-user_text = st.text_area("Tamil Text:", "வணக்கம், இது என் சொந்த குரலில் பேசும் ஏஐ.")
-
-if st.button("Clone My Voice"):
-    if uploaded_file is not None and user_text:
-        with st.spinner("AI unga voice-ai padikithu..."):
-            # Temporary-ah file-ai save panna
-            with open("sample_voice.wav", "wb") as f:
+# 3. Generation Button
+if st.button("Generate Ghost Voice 🎙️"):
+    if uploaded_file is not None and story_text:
+        with st.spinner("AI unga voice-la pesittu irukku... konjam poruunga..."):
+            # Temporary-ah file-ah save panrom
+            with open("temp_voice.wav", "wb") as f:
                 f.write(uploaded_file.getbuffer())
             
-            # XTTS v2 cloning process
-            output_path = "cloned_output.wav"
+            # Voice Generation
+            output_path = "final_ghost_story.wav"
             tts.tts_to_file(
-                text=user_text,
-                file_path=output_path,
-                speaker_wav="sample_voice.wav",
-                language="ta"
+                text=story_text,
+                speaker_wav="temp_voice.wav",
+                language="ta",
+                file_path=output_path
             )
             
-            # Play the result
-            st.audio(output_path)
-            st.success("Unga voice clone aayiduchi!")
+            # Output Display
+            st.success("Ghost Story ready bro!")
+            audio_file = open(output_path, 'rb')
+            st.audio(audio_file.read(), format='audio/wav')
+            
+            # Download Button
+            st.download_button(label="Download Audio", data=audio_file, file_name="ghost_story.wav")
     else:
-        st.error("File matrum text renduமே mukkiyam!")
-        
+        st.error("Dhayavu senju audio file matrum story script-ah kudunga!")
