@@ -1,49 +1,44 @@
 import streamlit as st
-from gtts import gTTS
+from TTS.api import TTS
 import os
+from pydub import AudioSegment
 
-# Web page title and style
-st.set_page_config(page_title="Tamil Text-to-Voice AI", page_icon="🔊")
-st.title("🔊 Tamil Text to Voice Converter")
-st.write("Unga Tamil text-ai inge type pannunga:")
+# Model-ai load pannuvathu (Muthal thadava matum late aagum)
+@st.cache_resource
+def load_model():
+    # GPU iruntha gpu=True kudunga, illana False
+    return TTS("tts_models/multilingual/multi-dataset/xtts_v2", gpu=False)
 
-# Text input area
-user_text = st.text_area("Tamil Text Input", "வணக்கம் நண்பா, எப்படி இருக்கீங்க?", height=150)
+tts = load_model()
 
-# Speed control option
-speed = st.radio("Pesura Vegam (Speed):", ("Normal", "Slow"), horizontal=True)
-is_slow = True if speed == "Slow" else False
+st.title("🎙️ Personal Tamil Voice Cloner")
+st.write("Unga 8-second voice-ai upload panni, unga voice-laye pesa vainga!")
 
-if st.button("Convert to Voice"):
-    if user_text.strip() == "":
-        st.warning("Please enter some Tamil text!")
+# 1. Voice File Upload
+uploaded_file = st.file_uploader("Upload your 8-sec voice (MP3/WAV)", type=["mp3", "wav"])
+
+# 2. Text Input
+user_text = st.text_area("Tamil Text:", "வணக்கம், இது என் சொந்த குரலில் பேசும் ஏஐ.")
+
+if st.button("Clone My Voice"):
+    if uploaded_file is not None and user_text:
+        with st.spinner("AI unga voice-ai padikithu..."):
+            # Temporary-ah file-ai save panna
+            with open("sample_voice.wav", "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            
+            # XTTS v2 cloning process
+            output_path = "cloned_output.wav"
+            tts.tts_to_file(
+                text=user_text,
+                file_path=output_path,
+                speaker_wav="sample_voice.wav",
+                language="ta"
+            )
+            
+            # Play the result
+            st.audio(output_path)
+            st.success("Unga voice clone aayiduchi!")
     else:
-        with st.spinner('Audio generate aaguthu...'):
-            try:
-                # gTTS use panni Tamil audio create panrathu
-                tts = gTTS(text=user_text, lang='ta', slow=is_slow)
-                filename = "tamil_audio.mp3"
-                tts.save(filename)
-                
-                # Web-la audio play panna streamlit function
-                audio_file = open(filename, 'rb')
-                audio_bytes = audio_file.read()
-                st.audio(audio_bytes, format='audio/mp3')
-                
-                # Download button
-                st.download_button(
-                    label="Download Audio",
-                    data=audio_bytes,
-                    file_name="tamil_voice.mp3",
-                    mime="audio/mp3"
-                )
-                
-                # Cleanup: System-la irunthu temporary file-ai remove panna
-                audio_file.close()
-                os.remove(filename)
-                
-            except Exception as e:
-                st.error(f"Error: {e}")
-
-st.divider()
-st.caption("Made with ❤️ for Tamil Developers")
+        st.error("File matrum text renduமே mukkiyam!")
+        
