@@ -1,53 +1,59 @@
 import streamlit as st
-from TTS.api import TTS
+from gtts import gTTS
 import os
-import torch
+from io import BytesIO
 
-# Page Config
-st.set_page_config(page_title="Ghost Story AI Voice", page_icon="👻")
+# --- Page Config ---
+st.set_page_config(page_title="Tamil Text to Voice Converter", page_icon="🎙️")
 
-st.title("👻 Ghost Story - Voice Cloner")
-st.write("Unga voice-laye bayangaramaana kathaigalai uruvaakkunga!")
+def main():
+    # 1.1 & 3: Application Name & UI
+    st.title("🎙️ Tamil Text to Voice Converter")
+    st.markdown("### YouTube Storytellers-க்கான க்யூட்டான டூல்")
 
-# AI Model Load (Unga 16GB RAM ithai nalla handle pannum)
-@st.cache_resource
-def load_model():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    return TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+    # 2.1 & 3: Text input field for Tamil content
+    tamil_text = st.text_area("Tamil Text-ஐ இங்கே உள்ளிடவும்:", height=250, 
+                              placeholder="ஒரு ஊர்ல ஒரு ராஜா இருந்தாராம்...")
 
-tts = load_model()
+    # 2.2 & 3: Voice age range selector
+    st.subheader("Voice Settings")
+    age_group = st.selectbox(
+        "வயது வரம்பு (Age Range):",
+        ["Young Adult Male (இளைஞர்)", "Middle-Aged Male (நடுத்தர வயது)", "Senior Male (பெரியவர்)"]
+    )
 
-# 1. Voice Upload Section
-uploaded_file = st.file_uploader("Unga 8-second audio file-ah upload pannunga (WAV/MP3)", type=['wav', 'mp3'])
+    # Logic to adjust speed based on age range
+    # 'slow=True' for Senior to simulate a slower, natural pace
+    is_slow = True if "Senior" in age_group else False
 
-# 2. Story Text Section
-story_text = st.text_area("Ghost Story Script-ah inga type pannunga:", 
-                          height=200, 
-                          placeholder="Antha iruttu araiyil...")
+    # 3: Generate button
+    if st.button("Generate Audio (குரலை உருவாக்கு)"):
+        if tamil_text.strip() == "":
+            st.error("Please enter some Tamil text first!")
+        else:
+            with st.spinner('Converting to voice...'):
+                try:
+                    # 2.2: Natural, casual style using gTTS
+                    tts = gTTS(text=tamil_text, lang='ta', slow=is_slow)
+                    
+                    # 2.3: Audio output in MP3 format
+                    mp3_fp = BytesIO()
+                    tts.write_to_fp(mp3_fp)
+                    
+                    # 3: Audio player for preview
+                    st.success("Audio Generated!")
+                    st.audio(mp3_fp, format='audio/mp3')
+                    
+                    # 2.3 & 3: Download button for MP3 file
+                    st.download_button(
+                        label="Download MP3 (பதிவிறக்கம் செய்)",
+                        data=mp3_fp.getvalue(),
+                        file_name="tamil_story_audio.mp3",
+                        mime="audio/mp3"
+                    )
+                except Exception as e:
+                    st.error(f"Error: {e}")
 
-# 3. Generation Button
-if st.button("Generate Ghost Voice 🎙️"):
-    if uploaded_file is not None and story_text:
-        with st.spinner("AI unga voice-la pesittu irukku... konjam poruunga..."):
-            # Temporary-ah file-ah save panrom
-            with open("temp_voice.wav", "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            
-            # Voice Generation
-            output_path = "final_ghost_story.wav"
-            tts.tts_to_file(
-                text=story_text,
-                speaker_wav="temp_voice.wav",
-                language="ta",
-                file_path=output_path
-            )
-            
-            # Output Display
-            st.success("Ghost Story ready bro!")
-            audio_file = open(output_path, 'rb')
-            st.audio(audio_file.read(), format='audio/wav')
-            
-            # Download Button
-            st.download_button(label="Download Audio", data=audio_file, file_name="ghost_story.wav")
-    else:
-        st.error("Dhayavu senju audio file matrum story script-ah kudunga!")
+if __name__ == "__main__":
+    main()
+    
