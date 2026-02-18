@@ -1,29 +1,21 @@
-import streamlit as st
-from gtts import gTTS
-import os
+import torch
+from TTS.api import TTS
 
-# Page Title Setup
-st.set_page_config(page_title="Tamil Ghost Story AI", page_icon="👻")
-st.title("🎙️ Tamil Storyteller AI")
+# GPU irukka nu check pannuvom (Fast processing-ku)
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# User Input Section
-st.subheader("Unga Story-ai Type Pannunga:")
-story_text = st.text_area("Tamil-la ezhudhavum...", height=150)
+# Multilingual model-ai load pannuvom (XTTS v2 - idhu ElevenLabs level quality tharum)
+tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
 
-# Generate Button
-if st.button("Generate Voice"):
-    if story_text:
-        with st.spinner('AI Pesudhu...'):
-            # Tamil voice generate panrom
-            tts = gTTS(text=story_text, lang='ta')
-            tts.save("story.mp3")
-        
-        st.success("Semma! Kelunga:")
-        st.audio("story.mp3")
-        
-        # Download option
-        with open("story.mp3", "rb") as file:
-            st.download_button(label="Download Audio", data=file, file_name="ghost_story.mp3")
-    else:
-        st.warning("Story text-ah type pannunga bro!")
-        
+# Script input
+story_text = "Oru oorula oru periya payangaramaana ghost irundhuchi. Adhu yaarum ninaikaadha nerathula veliya varum."
+
+# Voice Generation
+# 'speaker_wav' la oru 10 seconds casual-ah pesuna Tamil audio file path kudunga
+# ElevenLabs madhiriye andha kural-la pesum
+tts.tts_to_file(text=story_text, 
+                speaker_wav="your_sample_voice.wav", 
+                language="ta", 
+                file_path="ghost_story_output.wav")
+
+print("AI Voice Ready! ghost_story_output.wav file-ah check pannunga.")
